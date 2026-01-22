@@ -79,43 +79,19 @@ make migrate
 
 ---
 
-## Three Ways to Work
+## How It Works
 
 <p align="center">
   <img src="docs/assets/dataflow.svg" alt="Data Flow" width="100%">
 </p>
 
-### 1. Developer Mode (Claude Code)
-Build and extend your system using natural language. Claude reads your codebase, understands your schema, and writes code for you.
+| Interface | Purpose |
+|-----------|---------|
+| **Domain UIs** | Custom web UI per module (`/crm`, `/tasks`, `/calendar`) |
+| **AI Chat** | One chat interface to query and act across all domains |
+| **Claude Code** | Build new modules, extend existing ones |
 
-```
-"Add a contact_id column to invoices and update the API"
-"Create a new domain for inventory tracking"
-"Write a background task to sync with Stripe"
-```
-
-### 2. Web CRUD UI
-Every domain automatically gets a web interface. Browse, create, edit, and delete records without writing code.
-
-| Endpoint | What You Get |
-|----------|--------------|
-| `/crud?schema=crm` | Contacts, companies, interactions |
-| `/crud?schema=tasks` | Task management |
-| `/crud?schema=calendar` | Events and attendees |
-| `/crud?schema=notes` | Knowledge base |
-
-### 3. AI Chat Interface
-Natural language queries for your business data. The chat uses the same MCP tools as Claude Code.
-
-```
-You: "What meetings do I have tomorrow?"
-AI: "You have 3 meetings: 9am standup, 2pm sales call with Acme, 4pm product review..."
-
-You: "Send a follow-up email to John about the proposal"
-AI: [Drafts and sends email via Resend integration]
-```
-
-**All three interfaces share the same database.** Edit a contact in the CRUD UI, query it in chat, extend the schema with Claude Code.
+**Business logic runs in [Absurd](https://github.com/withpluto/absurd)** — a durable workflow engine with retries, scheduling, and state recovery. Send emails, sync data, process webhooks — all with guaranteed delivery.
 
 ---
 
