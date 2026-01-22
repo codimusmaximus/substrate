@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Substrate - Data Browser</title>
+    <link rel="stylesheet" href="/static/hud.css">
+    <style>
+        body { height: 100vh; display: flex; flex-direction: column; }
+        .container { display: flex; flex: 1; overflow: hidden; }
+        .sidebar {
+            width: 220px;
+            background: var(--bg-elevated);
+            border-right: 1px solid var(--border);
+            padding: 16px;
+            overflow-y: auto;
+        }
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .toolbar {
+            padding: 10px 16px;
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .content { flex: 1; overflow: auto; padding: 16px; }
+
+        .sidebar h2 {
+            font-size: 11px;
+            font-weight: 500;
+            margin: 16px 0 8px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .sidebar h2:first-child { margin-top: 0; }
+
+        .schema-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            margin-bottom: 2px;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            transition: all 0.15s;
+        }
+        .schema-item:hover { background: var(--bg-hover); color: var(--text); }
+        .schema-item.active { background: var(--bg-hover); color: var(--accent); }
+
+        .table-item {
+            padding: 6px 12px 6px 24px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-muted);
+            border-radius: var(--radius-sm);
+            transition: all 0.15s;
+        }
+        .table-item:hover { background: var(--bg-hover); color: var(--text); }
+        .table-item.active { background: rgba(59, 130, 246, 0.1); color: var(--accent); }
+
+        .pagination { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+        .pagination span { color: var(--text-muted); font-size: 12px; }
+
+        td.actions { white-space: nowrap; width: 140px; }
+        td.actions button { padding: 4px 10px; margin-right: 4px; font-size: 11px; }
+
+        .json-preview {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            background: var(--bg);
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: var(--text-secondary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: var(--text-muted);
+        }
+        .empty-state::before { content: 'Select a table'; }
+    </style>
+</head>
+<body>
+    <div class="nav-header">
+        <a href="/" class="brand">Substrate</a>
+        <span class="divider">/</span>
+        <span class="page-name">Data Browser</span>
+        <div class="nav-links">
+            <a href="/kanban">Kanban</a>
+            <a href="/cards">Cards</a>
+            <a href="/chat">Chat</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h2>Schemas</h2>
+            <div id="schemas"></div>
+        </div>
+        <div class="main">
+            <div class="toolbar">
+                <button onclick="openCreateModal()">+ New Row</button>
+                <button class="secondary" onclick="loadRows()">Refresh</button>
+                <div class="pagination">
+                    <button class="secondary" onclick="prevPage()">&lt;</button>
+                    <span id="pageInfo">--</span>
+                    <button class="secondary" onclick="nextPage()">&gt;</button>
+                </div>
+            </div>
+            <div class="content">
+                <div id="tableView"><div class="empty-state"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit/Create Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Edit Row</h3>
+                <button class="secondary" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer">
+                <button class="secondary" onclick="closeModal()">Cancel</button>
+                <button onclick="saveRow()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Modal -->
+    <div class="modal" id="viewModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>View Row</h3>
+                <button class="secondary" onclick="closeViewModal()">×</button>
+            </div>
+            <div class="modal-body" id="viewModalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const API = '/api';
+        let currentSchema = null;
+        let currentTable = null;
+        let currentPage = 0;
+        let editingId = null;
+        let rowCache = {};
+        const PAGE_SIZE = 50;
+
+        async function loadSchemas() {
+            const res = await fetch(`${API}/domains`);
+            const data = await res.json();
+
+            const container = document.getElementById('schemas');
+            container.innerHTML = '';
+
+            for (const domain of data.domains) {
+                const schemaDiv = document.createElement('div');
+                schemaDiv.innerHTML = `<div class="schema-item" onclick="selectSchema('${domain}')">${domain}</div>`;
+                container.appendChild(schemaDiv);
+
+                const tablesRes = await fetch(`${API}/${domain}/tables`);
+                const tablesData = await tablesRes.json();
+
+                const tablesDiv = document.createElement('div');
+                tablesDiv.id = `tables-${domain}`;
+                tablesDiv.style.display = 'none';
+
+                for (const table of tablesData.tables) {
+                    tablesDiv.innerHTML += `<div class="table-item" onclick="selectTable('${domain}', '${table}')">${table}</div>`;
+                }
+                container.appendChild(tablesDiv);
+            }
+        }
+
+        function selectSchema(schema) {
+            document.querySelectorAll('.schema-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('[id^="tables-"]').forEach(el => el.style.display = 'none');
+
+            event.target.classList.add('active');
+            document.getElementById(`tables-${schema}`).style.display = 'block';
+            currentSchema = schema;
+        }
+
+        function selectTable(schema, table) {
+            document.querySelectorAll('.table-item').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+
+            currentSchema = schema;
+            currentTable = table;
+            currentPage = 0;
+            loadRows();
+        }
+
+        async function loadRows() {
+            if (!currentSchema || !currentTable) {
+                document.getElementById('tableView').innerHTML = '<div class="empty-state"></div>';
+                return;
+            }
+
+            const offset = currentPage * PAGE_SIZE;
+            const res = await fetch(`${API}/${currentSchema}/${currentTable}?limit=${PAGE_SIZE}&offset=${offset}`);
+            const data = await res.json();
+
+            if (!data.rows || data.rows.length === 0) {
+                document.getElementById('tableView').innerHTML = '<div class="empty-state" style="text-align:center; padding:48px;">No rows</div>';
+                document.getElementById('pageInfo').textContent = 'Page 1';
+                return;
+            }
+
+            const columns = Object.keys(data.rows[0]);
+            rowCache = {};
+            for (const row of data.rows) rowCache[row.id] = row;
+
+            let html = '<table><thead><tr>';
+            for (const col of columns) html += `<th>${col}</th>`;
+            html += '<th>Actions</th></tr></thead><tbody>';
+
+            for (const row of data.rows) {
+                html += '<tr>';
+                for (const col of columns) {
+                    const val = row[col];
+                    let display = val;
+                    if (val === null) display = '<span class="text-muted">null</span>';
+                    else if (typeof val === 'object') display = '<span class="text-blue">{...}</span>';
+                    else if (typeof val === 'string' && val.length > 40) display = escapeHtml(val.substring(0, 40)) + '...';
+                    else if (typeof val === 'string') display = escapeHtml(val);
+                    html += `<td title="${escapeHtml(String(val))}">${display}</td>`;
+                }
+                html += `<td class="actions">
+                    <button class="secondary" onclick="viewRow('${row.id}')">View</button>
+                    <button class="secondary" onclick="editRow('${row.id}')">Edit</button>
+                    <button class="danger" onclick="deleteRow('${row.id}')">Del</button>
+                </td>`;
+                html += '</tr>';
+            }
+            html += '</tbody></table>';
+
+            document.getElementById('tableView').innerHTML = html;
+            document.getElementById('pageInfo').textContent = `Page ${currentPage + 1}`;
+        }
+
+        function prevPage() { if (currentPage > 0) { currentPage--; loadRows(); } }
+        function nextPage() { currentPage++; loadRows(); }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function viewRow(id) {
+            const row = rowCache[id];
+            if (!row) return alert('Row not found');
+
+            let html = '';
+            for (const [key, val] of Object.entries(row)) {
+                const display = typeof val === 'object' ? escapeHtml(JSON.stringify(val, null, 2)) : escapeHtml(String(val));
+                html += `<div class="form-group"><label>${escapeHtml(key)}</label><div class="json-preview">${display}</div></div>`;
+            }
+            document.getElementById('viewModalBody').innerHTML = html;
+            document.getElementById('viewModal').classList.add('open');
+        }
+
+        function closeViewModal() { document.getElementById('viewModal').classList.remove('open'); }
+
+        function openCreateModal() {
+            if (!currentTable) return alert('Select a table first');
+            editingId = null;
+            document.getElementById('modalTitle').textContent = 'Create Row';
+            document.getElementById('modalBody').innerHTML = `
+                <div class="form-group">
+                    <label>JSON Data</label>
+                    <textarea id="jsonData" placeholder='{"key": "value"}'>{}</textarea>
+                </div>
+            `;
+            document.getElementById('editModal').classList.add('open');
+        }
+
+        function editRow(id) {
+            const row = rowCache[id];
+            if (!row) return alert('Row not found');
+
+            editingId = id;
+            document.getElementById('modalTitle').textContent = 'Edit Row';
+
+            const editable = {...row};
+            delete editable.id;
+            delete editable.created_at;
+            delete editable.updated_at;
+
+            document.getElementById('modalBody').innerHTML = `
+                <div class="form-group">
+                    <label>JSON Data</label>
+                    <textarea id="jsonData">${escapeHtml(JSON.stringify(editable, null, 2))}</textarea>
+                </div>
+            `;
+            document.getElementById('editModal').classList.add('open');
+        }
+
+        function closeModal() { document.getElementById('editModal').classList.remove('open'); }
+
+        async function saveRow() {
+            const jsonData = document.getElementById('jsonData').value;
+            let data;
+            try { data = JSON.parse(jsonData); }
+            catch (e) { alert('Invalid JSON: ' + e.message); return; }
+
+            const method = editingId ? 'PATCH' : 'POST';
+            const url = editingId ? `${API}/${currentSchema}/${currentTable}/${editingId}` : `${API}/${currentSchema}/${currentTable}`;
+
+            const res = await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+
+            if (!res.ok) {
+                const err = await res.json();
+                alert('Error: ' + (err.detail || JSON.stringify(err)));
+                return;
+            }
+
+            closeModal();
+            loadRows();
+        }
+
+        async function deleteRow(id) {
+            if (!confirm('Delete this row?')) return;
+            await fetch(`${API}/${currentSchema}/${currentTable}/${id}`, {method: 'DELETE'});
+            loadRows();
+        }
+
+        loadSchemas();
+    </script>
+</body>
+</html>

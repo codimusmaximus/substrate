@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Substrate - Cards</title>
+    <link rel="stylesheet" href="/static/hud.css">
+    <style>
+        body { min-height: 100vh; }
+        .toolbar {
+            padding: 12px 16px;
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .search-box { flex: 1; min-width: 200px; }
+        .content { padding: 16px; }
+        .filter-select {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-header">
+        <a href="/" class="brand">Substrate</a>
+        <span class="divider">/</span>
+        <span class="page-name">Cards</span>
+        <div class="nav-links">
+            <a href="/kanban">Kanban</a>
+            <a href="/crud">Data</a>
+            <a href="/chat">Chat</a>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <div class="tabs" style="padding: 0; border: none; background: none;">
+            <button class="tab active" data-view="contacts">Contacts</button>
+            <button class="tab" data-view="companies">Companies</button>
+            <button class="tab" data-view="tasks">Tasks</button>
+        </div>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search records...">
+        </div>
+        <select id="filterSelect" class="filter-select">
+            <option value="">All Types</option>
+        </select>
+        <button onclick="openCreateModal()">+ New</button>
+    </div>
+
+    <div class="content">
+        <div class="card-grid" id="cardGrid"></div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="modal" id="detailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="detailTitle">Details</h3>
+                <button class="secondary" onclick="closeDetailModal()">×</button>
+            </div>
+            <div class="modal-body" id="detailBody"></div>
+            <div class="modal-footer" id="detailFooter"></div>
+        </div>
+    </div>
+
+    <!-- Create Modal -->
+    <div class="modal" id="createModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="createTitle">Create New</h3>
+                <button class="secondary" onclick="closeCreateModal()">×</button>
+            </div>
+            <div class="modal-body" id="createBody"></div>
+            <div class="modal-footer">
+                <button class="secondary" onclick="closeCreateModal()">Cancel</button>
+                <button onclick="saveNew()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = '/api';
+        let currentView = 'contacts';
+        let dataCache = [];
+        let currentItem = null;
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentView = tab.dataset.view;
+                updateFilters();
+                loadData();
+            });
+        });
+
+        document.getElementById('searchInput').addEventListener('input', debounce(loadData, 300));
+        document.getElementById('filterSelect').addEventListener('change', loadData);
+
+        function debounce(fn, ms) {
+            let timer;
+            return function(...args) {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn.apply(this, args), ms);
+            };
+        }
+
+        function updateFilters() {
+            const select = document.getElementById('filterSelect');
+            select.innerHTML = '<option value="">All</option>';
+
+            if (currentView === 'contacts') {
+                select.innerHTML += '<option value="lead">Lead</option><option value="customer">Customer</option><option value="investor">Investor</option><option value="partner">Partner</option><option value="vendor">Vendor</option>';
+            } else if (currentView === 'companies') {
+                select.innerHTML += '<option value="prospect">Prospect</option><option value="customer">Customer</option><option value="partner">Partner</option><option value="investor">Investor</option><option value="vendor">Vendor</option>';
+            } else if (currentView === 'tasks') {
+                select.innerHTML += '<option value="pending">Pending</option><option value="in_progress">In Progress</option><option value="done">Done</option>';
+            }
+        }
+
+        async function loadData() {
+            const search = document.getElementById('searchInput').value.trim();
+            const filter = document.getElementById('filterSelect').value;
+
+            let endpoint = currentView === 'contacts' ? `${API}/crm/contacts?limit=200` :
+                          currentView === 'companies' ? `${API}/crm/companies?limit=200` :
+                          `${API}/tasks/tasks?limit=200`;
+
+            const res = await fetch(endpoint);
+            const data = await res.json();
+            dataCache = data.rows || [];
+
+            let filtered = dataCache;
+            if (filter) {
+                if (currentView === 'tasks') {
+                    filtered = filtered.filter(item => item.status === filter);
+                } else {
+                    filtered = filtered.filter(item => item.type === filter);
+                }
+            }
+
+            if (search) {
+                const s = search.toLowerCase();
+                filtered = filtered.filter(item => {
+                    if (currentView === 'contacts') return (item.name || '').toLowerCase().includes(s) || (item.email || '').toLowerCase().includes(s);
+                    if (currentView === 'companies') return (item.name || '').toLowerCase().includes(s) || (item.domain || '').toLowerCase().includes(s);
+                    return (item.title || '').toLowerCase().includes(s);
+                });
+            }
+
+            renderCards(filtered);
+        }
+
+        function renderCards(items) {
+            const grid = document.getElementById('cardGrid');
+            if (items.length === 0) {
+                grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;">No items found</div>';
+                return;
+            }
+
+            grid.innerHTML = items.map((item, idx) => {
+                if (currentView === 'contacts') return renderContactCard(item, idx);
+                if (currentView === 'companies') return renderCompanyCard(item, idx);
+                return renderTaskCard(item, idx);
+            }).join('');
+
+            grid.querySelectorAll('.hud-card').forEach((card, idx) => {
+                card.onclick = () => openDetailModal(items[idx]);
+            });
+        }
+
+        function renderContactCard(item, idx) {
+            return `
+                <div class="hud-card" data-idx="${idx}">
+                    <div class="card-title">${escapeHtml(item.name)}</div>
+                    <div class="card-subtitle text-dim">${escapeHtml(item.title || '')}</div>
+                    <div class="card-meta mt-8">
+                        <span class="badge ${item.type}">${item.type}</span>
+                        ${item.email ? `<span class="text-dim">${escapeHtml(item.email)}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCompanyCard(item, idx) {
+            return `
+                <div class="hud-card" data-idx="${idx}">
+                    <div class="card-title">${escapeHtml(item.name)}</div>
+                    <div class="card-subtitle text-dim">${escapeHtml(item.industry || '')}</div>
+                    <div class="card-meta mt-8">
+                        <span class="badge ${item.type}">${item.type}</span>
+                        ${item.domain ? `<span class="text-dim">${escapeHtml(item.domain)}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTaskCard(item, idx) {
+            const isPastDue = item.due_at && new Date(item.due_at) < new Date();
+            return `
+                <div class="hud-card" data-idx="${idx}">
+                    <div class="card-title">${escapeHtml(item.title)}</div>
+                    <div class="card-meta mt-8">
+                        <span class="badge ${item.priority}">${item.priority}</span>
+                        <span class="badge ${item.status}">${item.status}</span>
+                        ${item.due_at ? `<span class="${isPastDue ? 'text-red' : 'text-dim'}">Due: ${new Date(item.due_at).toLocaleDateString()}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // Detail Modal
+        function openDetailModal(item) {
+            currentItem = item;
+            document.getElementById('detailTitle').textContent = item.name || item.title || '';
+
+            let bodyHtml = '';
+            let footerHtml = '<button class="secondary" onclick="closeDetailModal()">Close</button>';
+
+            if (currentView === 'contacts') {
+                bodyHtml = `
+                    <div class="detail-section">
+                        <h4>Contact Info</h4>
+                        <div class="detail-row"><div class="detail-label">Type</div><div class="detail-value"><span class="badge ${item.type}">${item.type}</span></div></div>
+                        <div class="detail-row"><div class="detail-label">Status</div><div class="detail-value">${item.status || 'active'}</div></div>
+                        ${item.email ? `<div class="detail-row"><div class="detail-label">Email</div><div class="detail-value">${escapeHtml(item.email)}</div></div>` : ''}
+                        ${item.phone ? `<div class="detail-row"><div class="detail-label">Phone</div><div class="detail-value">${escapeHtml(item.phone)}</div></div>` : ''}
+                        ${item.title ? `<div class="detail-row"><div class="detail-label">Title</div><div class="detail-value">${escapeHtml(item.title)}</div></div>` : ''}
+                    </div>
+                `;
+                footerHtml += '<button onclick="editItem()">Edit</button>';
+            } else if (currentView === 'companies') {
+                bodyHtml = `
+                    <div class="detail-section">
+                        <h4>Company Info</h4>
+                        <div class="detail-row"><div class="detail-label">Type</div><div class="detail-value"><span class="badge ${item.type}">${item.type}</span></div></div>
+                        ${item.domain ? `<div class="detail-row"><div class="detail-label">Domain</div><div class="detail-value">${escapeHtml(item.domain)}</div></div>` : ''}
+                        ${item.industry ? `<div class="detail-row"><div class="detail-label">Industry</div><div class="detail-value">${escapeHtml(item.industry)}</div></div>` : ''}
+                        ${item.size ? `<div class="detail-row"><div class="detail-label">Size</div><div class="detail-value">${escapeHtml(item.size)}</div></div>` : ''}
+                    </div>
+                `;
+                footerHtml += '<button onclick="editItem()">Edit</button>';
+            } else {
+                bodyHtml = `
+                    <div class="detail-section">
+                        <h4>Task Info</h4>
+                        <div class="detail-row"><div class="detail-label">Status</div><div class="detail-value"><span class="badge ${item.status}">${item.status}</span></div></div>
+                        <div class="detail-row"><div class="detail-label">Priority</div><div class="detail-value"><span class="badge ${item.priority}">${item.priority}</span></div></div>
+                        ${item.assigned_to ? `<div class="detail-row"><div class="detail-label">Assigned</div><div class="detail-value">@${item.assigned_to}</div></div>` : ''}
+                        ${item.due_at ? `<div class="detail-row"><div class="detail-label">Due</div><div class="detail-value">${new Date(item.due_at).toLocaleString()}</div></div>` : ''}
+                        ${item.description ? `<div class="detail-row"><div class="detail-label">Desc</div><div class="detail-value">${escapeHtml(item.description)}</div></div>` : ''}
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+                        ${item.status === 'pending' ? '<button onclick="updateTask(\'in_progress\')">Start</button>' : ''}
+                        ${item.status !== 'done' ? '<button onclick="updateTask(\'done\')">Complete</button>' : ''}
+                        ${item.status === 'done' ? '<button class="secondary" onclick="updateTask(\'pending\')">Reopen</button>' : ''}
+                    </div>
+                `;
+            }
+
+            document.getElementById('detailBody').innerHTML = bodyHtml;
+            document.getElementById('detailFooter').innerHTML = footerHtml;
+            document.getElementById('detailModal').classList.add('open');
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.remove('open');
+            currentItem = null;
+        }
+
+        async function updateTask(status) {
+            if (!currentItem) return;
+            const data = { status };
+            if (status === 'done') data.completed_at = new Date().toISOString();
+            await fetch(`${API}/tasks/tasks/${currentItem.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            closeDetailModal();
+            loadData();
+        }
+
+        function editItem() {
+            closeDetailModal();
+            openCreateModal(currentItem);
+        }
+
+        // Create Modal
+        function openCreateModal(item = null) {
+            const isEdit = !!item;
+            document.getElementById('createTitle').textContent = isEdit ? 'Edit Record' : 'New Record';
+
+            let formHtml = '';
+            if (currentView === 'contacts') {
+                formHtml = `
+                    <div class="form-group"><label>Name</label><input type="text" id="formName" value="${escapeHtml(item?.name || '')}"></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Email</label><input type="email" id="formEmail" value="${escapeHtml(item?.email || '')}"></div>
+                        <div class="form-group"><label>Phone</label><input type="tel" id="formPhone" value="${escapeHtml(item?.phone || '')}"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Type</label>
+                            <select id="formType">
+                                <option value="lead" ${item?.type === 'lead' ? 'selected' : ''}>Lead</option>
+                                <option value="customer" ${item?.type === 'customer' ? 'selected' : ''}>Customer</option>
+                                <option value="investor" ${item?.type === 'investor' ? 'selected' : ''}>Investor</option>
+                                <option value="partner" ${item?.type === 'partner' ? 'selected' : ''}>Partner</option>
+                                <option value="vendor" ${item?.type === 'vendor' ? 'selected' : ''}>Vendor</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Title</label><input type="text" id="formTitle" value="${escapeHtml(item?.title || '')}"></div>
+                    </div>
+                `;
+            } else if (currentView === 'companies') {
+                formHtml = `
+                    <div class="form-group"><label>Name</label><input type="text" id="formName" value="${escapeHtml(item?.name || '')}"></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Domain</label><input type="text" id="formDomain" value="${escapeHtml(item?.domain || '')}"></div>
+                        <div class="form-group"><label>Industry</label><input type="text" id="formIndustry" value="${escapeHtml(item?.industry || '')}"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Type</label>
+                            <select id="formType">
+                                <option value="prospect" ${item?.type === 'prospect' ? 'selected' : ''}>Prospect</option>
+                                <option value="customer" ${item?.type === 'customer' ? 'selected' : ''}>Customer</option>
+                                <option value="partner" ${item?.type === 'partner' ? 'selected' : ''}>Partner</option>
+                                <option value="investor" ${item?.type === 'investor' ? 'selected' : ''}>Investor</option>
+                                <option value="vendor" ${item?.type === 'vendor' ? 'selected' : ''}>Vendor</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Size</label>
+                            <select id="formSize">
+                                <option value="">-</option>
+                                <option value="startup" ${item?.size === 'startup' ? 'selected' : ''}>Startup</option>
+                                <option value="smb" ${item?.size === 'smb' ? 'selected' : ''}>SMB</option>
+                                <option value="enterprise" ${item?.size === 'enterprise' ? 'selected' : ''}>Enterprise</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+            } else {
+                formHtml = `
+                    <div class="form-group"><label>Title</label><input type="text" id="formTaskTitle" value="${escapeHtml(item?.title || '')}"></div>
+                    <div class="form-group"><label>Description</label><textarea id="formTaskDesc">${escapeHtml(item?.description || '')}</textarea></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Priority</label>
+                            <select id="formPriority">
+                                <option value="low" ${item?.priority === 'low' ? 'selected' : ''}>Low</option>
+                                <option value="medium" ${item?.priority === 'medium' || !item ? 'selected' : ''}>Medium</option>
+                                <option value="high" ${item?.priority === 'high' ? 'selected' : ''}>High</option>
+                                <option value="urgent" ${item?.priority === 'urgent' ? 'selected' : ''}>Urgent</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Due Date</label><input type="date" id="formDue" value="${item?.due_at ? item.due_at.split('T')[0] : ''}"></div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('createBody').innerHTML = formHtml;
+            document.getElementById('createBody').dataset.editId = item?.id || '';
+            document.getElementById('createModal').classList.add('open');
+        }
+
+        function closeCreateModal() {
+            document.getElementById('createModal').classList.remove('open');
+        }
+
+        async function saveNew() {
+            const editId = document.getElementById('createBody').dataset.editId;
+            let endpoint, data;
+
+            if (currentView === 'contacts') {
+                const name = document.getElementById('formName').value.trim();
+                if (!name) return alert('Name required');
+                data = {
+                    name,
+                    email: document.getElementById('formEmail').value.trim() || null,
+                    phone: document.getElementById('formPhone').value.trim() || null,
+                    type: document.getElementById('formType').value,
+                    title: document.getElementById('formTitle').value.trim() || null
+                };
+                endpoint = `${API}/crm/contacts`;
+            } else if (currentView === 'companies') {
+                const name = document.getElementById('formName').value.trim();
+                if (!name) return alert('Name required');
+                data = {
+                    name,
+                    domain: document.getElementById('formDomain').value.trim() || null,
+                    industry: document.getElementById('formIndustry').value.trim() || null,
+                    type: document.getElementById('formType').value,
+                    size: document.getElementById('formSize').value || null
+                };
+                endpoint = `${API}/crm/companies`;
+            } else {
+                const title = document.getElementById('formTaskTitle').value.trim();
+                if (!title) return alert('Title required');
+                const due = document.getElementById('formDue').value;
+                data = {
+                    title,
+                    description: document.getElementById('formTaskDesc').value.trim() || null,
+                    priority: document.getElementById('formPriority').value
+                };
+                if (due) data.due_at = new Date(due).toISOString();
+                if (!editId) data.status = 'pending';
+                endpoint = `${API}/tasks/tasks`;
+            }
+
+            if (editId) {
+                await fetch(`${endpoint}/${editId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+            } else {
+                await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+            }
+
+            closeCreateModal();
+            loadData();
+        }
+
+        // Init
+        updateFilters();
+        loadData();
+    </script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: substrate-postgres
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: substrate
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./config/sql/absurd.sql:/docker-entrypoint-initdb.d/01-absurd.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build:
+      context: .
+      dockerfile: substrate/core/worker/Dockerfile
+    container_name: substrate-worker
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/substrate
+      QUEUE_NAME: default
+      VAULT_PATH: /vault
+      VAULT_REPO: ${VAULT_REPO:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+    volumes:
+      - vault_data:/vault
+      - ${SSH_KEY_PATH:-./.secrets/deploy_key}:/root/.ssh/id_ed25519:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: substrate/ui/api/Dockerfile
+    container_name: substrate-api
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/substrate
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  habitat:
+    build:
+      context: ./habitat
+      dockerfile: Dockerfile
+    container_name: substrate-habitat
+    environment:
+      HABITAT_DB_HOST: postgres
+      HABITAT_DB_PORT: 5432
+      HABITAT_DB_NAME: substrate
+      HABITAT_DB_USER: postgres
+      HABITAT_DB_PASSWORD: postgres
+    ports:
+      - "7890:7890"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  vault_data:

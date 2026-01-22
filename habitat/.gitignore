@@ -1,0 +1,6 @@
+*.pid
+*.log
+./habitat
+internal/web/dist/
+ui/.vite
+bin

@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar | Substrate</title>
+    <link rel="stylesheet" href="/static/hud.css">
+    <style>
+        .page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content {
+            flex: 1;
+            padding: 24px;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .section {
+            margin-bottom: 32px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .date-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .event-card {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.15s;
+        }
+
+        .event-card:hover {
+            border-color: var(--border-hover);
+        }
+
+        .event-card.today {
+            border-left: 3px solid var(--accent);
+        }
+
+        .event-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .event-time {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--accent);
+            margin-bottom: 4px;
+        }
+
+        .event-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .event-badges {
+            display: flex;
+            gap: 6px;
+        }
+
+        .event-location {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        .attendees {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .attendees-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .attendee {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-dot.accepted { background: var(--green); }
+        .status-dot.tentative { background: var(--amber); }
+        .status-dot.pending { background: var(--text-muted); }
+        .status-dot.declined { background: var(--red); }
+
+        .attendee-name {
+            color: var(--text);
+        }
+
+        .attendee-status {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .day-group {
+            margin-bottom: 24px;
+        }
+
+        .day-header {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 12px;
+        }
+
+        .day-header.today {
+            color: var(--accent);
+        }
+
+        .no-events {
+            padding: 16px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+            background: var(--bg-elevated);
+            border: 1px dashed var(--border);
+            border-radius: var(--radius);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .event-card {
+            cursor: pointer;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal.open { display: flex; }
+
+        .modal-content {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 500px;
+            max-height: 85vh;
+            overflow: auto;
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 { font-size: 16px; margin: 0; }
+
+        .modal-body { padding: 20px; }
+
+        .modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .close-btn:hover { color: var(--text); }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover { background: #2563eb; }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+            color: var(--text);
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <nav class="nav-header">
+            <a href="/" class="brand">SUBSTRATE</a>
+            <span class="divider">/</span>
+            <span class="page-name">Calendar</span>
+            <div class="nav-links">
+                <a href="/">Dashboard</a>
+                <a href="/kanban">Kanban</a>
+                <a href="/chat">Chat</a>
+            </div>
+        </nav>
+
+        <div class="content">
+            <div id="calendar-content">
+                <div class="loading">Loading calendar...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Event Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Event</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="editTitle">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="editDescription" placeholder="Add meeting notes, agenda, or details..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" id="editLocation" placeholder="Office, Zoom link, etc.">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEvent()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/calendar';
+        let currentEventId = null;
+        let eventsCache = [];
+
+        // Modal functions
+        function openModal(eventId) {
+            const event = eventsCache.find(e => e.id === eventId);
+            if (!event) return;
+
+            currentEventId = eventId;
+            document.getElementById('editTitle').value = event.title || '';
+            document.getElementById('editDescription').value = event.description || '';
+            document.getElementById('editLocation').value = event.location || '';
+            document.getElementById('editModal').classList.add('open');
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').classList.remove('open');
+            currentEventId = null;
+        }
+
+        async function saveEvent() {
+            if (!currentEventId) return;
+
+            const data = {
+                title: document.getElementById('editTitle').value,
+                description: document.getElementById('editDescription').value || null,
+                location: document.getElementById('editLocation').value || null,
+            };
+
+            try {
+                const response = await fetch(`/api/calendar/events/${currentEventId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    closeModal();
+                    loadCalendar(); // Refresh
+                } else {
+                    alert('Failed to save event');
+                }
+            } catch (error) {
+                console.error('Save failed:', error);
+                alert('Failed to save event');
+            }
+        }
+
+        // Close modal on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Close modal on backdrop click
+        document.getElementById('editModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) closeModal();
+        });
+
+        function formatTime(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+        }
+
+        function formatDate(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function isToday(isoString) {
+            const date = new Date(isoString);
+            const today = new Date();
+            return date.toDateString() === today.toDateString();
+        }
+
+        function getDateKey(isoString) {
+            return new Date(isoString).toDateString();
+        }
+
+        function renderAttendee(attendee) {
+            const status = attendee.status || 'pending';
+            return `
+                <div class="attendee">
+                    <span class="status-dot ${status}"></span>
+                    <span class="attendee-name">${attendee.name || attendee.email}</span>
+                    <span class="attendee-status">(${status})</span>
+                </div>
+            `;
+        }
+
+        function renderEvent(event, showDate = false) {
+            const today = isToday(event.starts_at);
+            const attendeesHtml = event.attendees?.length > 0
+                ? `<div class="attendees">
+                    <div class="attendees-label">Attendees</div>
+                    ${event.attendees.map(renderAttendee).join('')}
+                   </div>`
+                : '';
+
+            const descriptionHtml = event.description
+                ? `<div class="event-location" style="white-space: pre-wrap;">${event.description}</div>`
+                : `<div class="event-location" style="color: var(--text-muted); font-style: italic;">Click to add details...</div>`;
+
+            return `
+                <div class="event-card ${today ? 'today' : ''}" onclick="openModal('${event.id}')">
+                    <div class="event-header">
+                        <div>
+                            <div class="event-time">${formatTime(event.starts_at)} - ${formatTime(event.ends_at)}</div>
+                            <div class="event-title">${event.title}</div>
+                        </div>
+                        <div class="event-badges">
+                            <span class="badge muted">${event.type || 'event'}</span>
+                            <span class="badge ${event.status === 'confirmed' ? 'green' : 'muted'}">${event.status}</span>
+                        </div>
+                    </div>
+                    ${event.location ? `<div class="event-location">${event.location}</div>` : ''}
+                    ${descriptionHtml}
+                    ${attendeesHtml}
+                </div>
+            `;
+        }
+
+        function groupEventsByDay(events) {
+            const groups = {};
+            events.forEach(event => {
+                const key = getDateKey(event.starts_at);
+                if (!groups[key]) {
+                    groups[key] = [];
+                }
+                groups[key].push(event);
+            });
+            return groups;
+        }
+
+        function renderCalendar(events) {
+            if (!events || events.length === 0) {
+                return `
+                    <div class="section">
+                        <div class="no-events">No upcoming events</div>
+                    </div>
+                `;
+            }
+
+            const grouped = groupEventsByDay(events);
+            const sortedDays = Object.keys(grouped).sort((a, b) => new Date(a) - new Date(b));
+
+            let html = '';
+            sortedDays.forEach(dayKey => {
+                const dayEvents = grouped[dayKey];
+                const today = new Date().toDateString() === dayKey;
+                const dateLabel = today ? 'Today' : formatDate(dayEvents[0].starts_at);
+
+                html += `
+                    <div class="day-group">
+                        <div class="day-header ${today ? 'today' : ''}">${dateLabel}</div>
+                        ${dayEvents.map(e => renderEvent(e)).join('')}
+                    </div>
+                `;
+            });
+
+            return html;
+        }
+
+        async function loadCalendar() {
+            try {
+                const response = await fetch(`${API_BASE}/upcoming?days=14`);
+                const data = await response.json();
+
+                eventsCache = data.events || [];
+                document.getElementById('calendar-content').innerHTML = renderCalendar(eventsCache);
+            } catch (error) {
+                console.error('Failed to load calendar:', error);
+                document.getElementById('calendar-content').innerHTML = `
+                    <div class="no-events">Failed to load calendar. <a href="javascript:loadCalendar()">Retry</a></div>
+                `;
+            }
+        }
+
+        loadCalendar();
+    </script>
+</body>
+</html>

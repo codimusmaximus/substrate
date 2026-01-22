@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "substrate": {
+      "type": "stdio",
+      "command": ".venv/bin/python",
+      "args": ["-m", "substrate.ui.mcp.server"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "DATABASE_URL": "postgresql://postgres:postgres@localhost:5433/substrate"
+      }
+    }
+  }
+}

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Substrate - Kanban</title>
+    <link rel="stylesheet" href="/static/hud.css">
+    <style>
+        body { height: 100vh; display: flex; flex-direction: column; }
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    </style>
+</head>
+<body>
+    <div class="nav-header">
+        <a href="/" class="brand">Substrate</a>
+        <span class="divider">/</span>
+        <span class="page-name">Kanban</span>
+        <div class="nav-links">
+            <a href="/cards">Cards</a>
+            <a href="/crud">Data</a>
+            <a href="/chat">Chat</a>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" data-view="tasks">Tasks</button>
+        <button class="tab" data-view="contacts">Contacts</button>
+        <div style="margin-left: auto;">
+            <button onclick="openNewTaskModal()">+ New Task</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="kanban" id="kanban"></div>
+    </div>
+
+    <!-- Task Modal -->
+    <div class="modal" id="taskModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="taskModalTitle">Task Detail</h3>
+                <button class="secondary" onclick="closeTaskModal()">×</button>
+            </div>
+            <div class="modal-body" id="taskModalBody"></div>
+            <div class="modal-footer" id="taskModalFooter"></div>
+        </div>
+    </div>
+
+    <!-- New Task Modal -->
+    <div class="modal" id="newTaskModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>New Task</h3>
+                <button class="secondary" onclick="closeNewTaskModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="newTaskTitle" placeholder="What needs to be done?">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="newTaskDesc" placeholder="Add more details..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Priority</label>
+                        <select id="newTaskPriority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Due Date</label>
+                        <input type="date" id="newTaskDue">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="secondary" onclick="closeNewTaskModal()">Cancel</button>
+                <button onclick="saveNewTask()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = '/api';
+        let currentView = 'tasks';
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentView = tab.dataset.view;
+                loadKanban();
+            });
+        });
+
+        async function loadKanban() {
+            if (currentView === 'tasks') {
+                await loadTasksKanban();
+            } else {
+                await loadContactsKanban();
+            }
+        }
+
+        async function loadTasksKanban() {
+            const res = await fetch(`${API}/tasks/tasks?limit=200`);
+            const data = await res.json();
+            const tasks = data.rows || [];
+
+            const columns = {
+                pending: { title: 'Pending', items: [] },
+                in_progress: { title: 'In Progress', items: [] },
+                done: { title: 'Complete', items: [] }
+            };
+
+            tasks.forEach(task => {
+                const status = task.status || 'pending';
+                if (columns[status]) columns[status].items.push(task);
+            });
+
+            renderKanban(columns, 'task');
+        }
+
+        async function loadContactsKanban() {
+            const res = await fetch(`${API}/crm/contacts?limit=200`);
+            const data = await res.json();
+            const contacts = data.rows || [];
+
+            const columns = {
+                lead: { title: 'Leads', items: [] },
+                customer: { title: 'Customers', items: [] },
+                investor: { title: 'Investors', items: [] },
+                partner: { title: 'Partners', items: [] }
+            };
+
+            contacts.forEach(contact => {
+                const type = contact.type || 'lead';
+                if (columns[type]) {
+                    columns[type].items.push(contact);
+                } else {
+                    columns.lead.items.push(contact);
+                }
+            });
+
+            renderKanban(columns, 'contact');
+        }
+
+        function renderKanban(columns, type) {
+            const kanban = document.getElementById('kanban');
+            kanban.innerHTML = '';
+
+            for (const [key, col] of Object.entries(columns)) {
+                const colEl = document.createElement('div');
+                colEl.className = 'column';
+                colEl.innerHTML = `
+                    <div class="column-header">
+                        <span class="column-title">${col.title}</span>
+                        <span class="column-count">${col.items.length}</span>
+                    </div>
+                    <div class="column-cards" id="col-${key}"></div>
+                `;
+                kanban.appendChild(colEl);
+
+                const cardsEl = colEl.querySelector('.column-cards');
+                if (col.items.length === 0) {
+                    cardsEl.innerHTML = '<div class="empty-state">No items</div>';
+                } else {
+                    col.items.forEach(item => {
+                        cardsEl.appendChild(createCard(item, type));
+                    });
+                }
+            }
+        }
+
+        function createCard(item, type) {
+            const card = document.createElement('div');
+            card.className = 'hud-card';
+            card.onclick = () => type === 'task' ? openTaskModal(item) : openContactModal(item);
+
+            if (type === 'task') {
+                const isPastDue = item.due_at && new Date(item.due_at) < new Date();
+                const dueText = item.due_at ? new Date(item.due_at).toLocaleDateString() : '';
+                card.innerHTML = `
+                    <div class="card-title">${escapeHtml(item.title)}</div>
+                    <div class="card-meta">
+                        <span class="badge ${item.priority}">${item.priority}</span>
+                        ${dueText ? `<span class="${isPastDue ? 'text-red' : 'text-dim'}">${dueText}</span>` : ''}
+                        ${item.assigned_to ? `<span class="text-dim">@${item.assigned_to}</span>` : ''}
+                    </div>
+                `;
+            } else {
+                card.innerHTML = `
+                    <div class="card-title">${escapeHtml(item.name)}</div>
+                    <div class="card-meta">
+                        <span class="badge ${item.type}">${item.type}</span>
+                        ${item.email ? `<span class="text-dim">${escapeHtml(item.email)}</span>` : ''}
+                    </div>
+                `;
+            }
+            return card;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // Task Modal
+        function openTaskModal(task) {
+            document.getElementById('taskModalTitle').textContent = task.title;
+            document.getElementById('taskModalBody').innerHTML = `
+                <div class="detail-section">
+                    <h4>Details</h4>
+                    <div class="detail-row">
+                        <div class="detail-label">Status</div>
+                        <div class="detail-value"><span class="badge ${task.status}">${task.status}</span></div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Priority</div>
+                        <div class="detail-value"><span class="badge ${task.priority}">${task.priority}</span></div>
+                    </div>
+                    ${task.assigned_to ? `<div class="detail-row"><div class="detail-label">Assigned</div><div class="detail-value">@${task.assigned_to}</div></div>` : ''}
+                    ${task.due_at ? `<div class="detail-row"><div class="detail-label">Due</div><div class="detail-value">${new Date(task.due_at).toLocaleDateString()}</div></div>` : ''}
+                </div>
+                ${task.description ? `<div class="detail-section"><h4>Description</h4><p class="text-dim">${escapeHtml(task.description)}</p></div>` : ''}
+            `;
+
+            let footerHtml = '<button class="secondary" onclick="closeTaskModal()">Close</button>';
+            if (task.status === 'pending') {
+                footerHtml += `<button onclick="updateTaskStatus('${task.id}', 'in_progress')">Start</button>`;
+            }
+            if (task.status !== 'done') {
+                footerHtml += `<button onclick="completeTask('${task.id}')">Complete</button>`;
+            }
+            document.getElementById('taskModalFooter').innerHTML = footerHtml;
+            document.getElementById('taskModal').classList.add('open');
+        }
+
+        function closeTaskModal() {
+            document.getElementById('taskModal').classList.remove('open');
+        }
+
+        async function updateTaskStatus(id, status) {
+            await fetch(`${API}/tasks/tasks/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            closeTaskModal();
+            loadKanban();
+        }
+
+        async function completeTask(id) {
+            await fetch(`${API}/tasks/tasks/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'done', completed_at: new Date().toISOString() })
+            });
+            closeTaskModal();
+            loadKanban();
+        }
+
+        // New Task Modal
+        function openNewTaskModal() {
+            document.getElementById('newTaskTitle').value = '';
+            document.getElementById('newTaskDesc').value = '';
+            document.getElementById('newTaskPriority').value = 'medium';
+            document.getElementById('newTaskDue').value = '';
+            document.getElementById('newTaskModal').classList.add('open');
+        }
+
+        function closeNewTaskModal() {
+            document.getElementById('newTaskModal').classList.remove('open');
+        }
+
+        async function saveNewTask() {
+            const title = document.getElementById('newTaskTitle').value.trim();
+            if (!title) return alert('Title required');
+
+            const data = {
+                title,
+                description: document.getElementById('newTaskDesc').value.trim() || null,
+                priority: document.getElementById('newTaskPriority').value,
+                status: 'pending'
+            };
+
+            const due = document.getElementById('newTaskDue').value;
+            if (due) data.due_at = new Date(due).toISOString();
+
+            await fetch(`${API}/tasks/tasks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            closeNewTaskModal();
+            loadKanban();
+        }
+
+        function openContactModal(contact) {
+            document.getElementById('taskModalTitle').textContent = contact.name;
+            document.getElementById('taskModalBody').innerHTML = `
+                <div class="detail-section">
+                    <h4>Contact Info</h4>
+                    <div class="detail-row">
+                        <div class="detail-label">Type</div>
+                        <div class="detail-value"><span class="badge ${contact.type}">${contact.type}</span></div>
+                    </div>
+                    ${contact.email ? `<div class="detail-row"><div class="detail-label">Email</div><div class="detail-value">${escapeHtml(contact.email)}</div></div>` : ''}
+                    ${contact.phone ? `<div class="detail-row"><div class="detail-label">Phone</div><div class="detail-value">${escapeHtml(contact.phone)}</div></div>` : ''}
+                    ${contact.title ? `<div class="detail-row"><div class="detail-label">Title</div><div class="detail-value">${escapeHtml(contact.title)}</div></div>` : ''}
+                </div>
+            `;
+            document.getElementById('taskModalFooter').innerHTML = '<button class="secondary" onclick="closeTaskModal()">Close</button>';
+            document.getElementById('taskModal').classList.add('open');
+        }
+
+        // Init
+        loadKanban();
+    </script>
+</body>
+</html>
