@@ -1,112 +1,100 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/codimusmaximus/substrate/main/docs/assets/logo-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/codimusmaximus/substrate/main/docs/assets/logo-light.svg">
-  <img alt="Substrate" src="https://raw.githubusercontent.com/codimusmaximus/substrate/main/docs/assets/logo-light.svg" width="400">
-</picture>
+<p align="center">
+  <img src="docs/assets/logo-dark.svg" alt="Substrate" width="350">
+</p>
 
-# Substrate
+<p align="center">
+  <strong>Your personal business operating system.</strong><br>
+  Build modular business systems with PostgreSQL, Python, and AI-native interfaces.
+</p>
 
-**Your personal business operating system.** Build integrated business systems with PostgreSQL, Python, and AI-native interfaces.
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![MCP Tools](https://img.shields.io/badge/MCP%20Tools-70+-green.svg)](https://modelcontextprotocol.io/)
+<p align="center">
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"></a>
+  <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP%20Tools-70+-green.svg" alt="MCP Tools"></a>
+</p>
 
 ---
 
 ## The Problem
 
-You're running a business with 10+ SaaS subscriptions. Your data is scattered. Nothing integrates well. You can't query across systems. You don't own anything.
+You're running a business with 10+ SaaS subscriptions. Your data is scattered across tools that don't integrate. You can't query across systems. You don't own anything.
 
 ## The Solution
 
-**Substrate** gives you the primitives to build exactly what you need:
+**Substrate** gives you the primitives to build exactly what you need—then extend it with your own modules.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         YOUR BUSINESS                            │
-├─────────────────────────────────────────────────────────────────┤
-│  📇 CRM        📋 Tasks       📅 Calendar      📝 Notes          │
-│  💼 Sales      📧 Email       🔔 Events        🔐 Auth           │
-├─────────────────────────────────────────────────────────────────┤
-│                     🤖 AI Chat Interface                         │
-│                     🔌 70+ MCP Tools                             │
-│                     🔄 Background Workflows                      │
-├─────────────────────────────────────────────────────────────────┤
-│                     🐘 PostgreSQL (You Own It)                   │
-└─────────────────────────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="docs/assets/architecture.svg" alt="Substrate Architecture" width="100%">
+</p>
 
 ---
 
-## Architecture
+## Modular By Design
 
-```mermaid
-flowchart TB
-    subgraph External["External Systems"]
-        OBS[Obsidian Vault]
-        EMAIL[Email/Resend]
-        API[Webhooks/APIs]
-    end
+Every feature in Substrate is a **self-contained module**. CRM, Tasks, Calendar—they're all just modules in the `domains/` folder. You can add your own in minutes.
 
-    subgraph Integrations["integrations/"]
-        OBS_INT[obsidian/]
-        EMAIL_INT[resend/]
-    end
+<p align="center">
+  <img src="docs/assets/modules.svg" alt="Build Your Own Modules" width="100%">
+</p>
 
-    subgraph Domains["domains/"]
-        CRM[crm/]
-        TASKS[tasks/]
-        CAL[calendar/]
-        NOTES[notes/]
-        EVENTS[events/]
-        AUTH[auth/]
-    end
+### Create a Module in 4 Steps
 
-    subgraph Core["core/"]
-        DB[(PostgreSQL)]
-        WORKER[Absurd Worker]
-        CONFIG[Config]
-    end
-
-    subgraph UI["ui/"]
-        RESTAPI[REST API]
-        CHAT[AI Chat]
-        MCP[MCP Server]
-        WEB[Web Dashboards]
-    end
-
-    External --> Integrations
-    Integrations --> Domains
-    Domains --> Core
-    Core --> UI
-
-    MCP -.->|70+ tools| CLAUDE[Claude Code]
+```bash
+# 1. Create the folder
+mkdir -p substrate/domains/invoicing/sql
 ```
+
+```sql
+-- 2. Define schema: sql/001_init.sql
+CREATE SCHEMA IF NOT EXISTS invoicing;
+
+CREATE TABLE invoicing.invoices (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    contact_id UUID REFERENCES crm.contacts(id),
+    status TEXT DEFAULT 'draft',
+    total_cents INTEGER,
+    due_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+```python
+# 3. Add AI tools: tools.py
+def create_invoice(contact_id: str, amount: int) -> dict:
+    """Create an invoice for a contact."""
+    # Your business logic here
+    pass
+```
+
+```bash
+# 4. Run migrations
+make migrate
+```
+
+**That's it.** Your module now has:
+- REST API endpoints (`/api/invoicing/invoices`)
+- Web UI for browsing/editing
+- MCP tools for Claude Code
+- Background task support
 
 ---
 
-## Data Flow
+## How It Works
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant Claude as Claude Code
-    participant MCP as MCP Server
-    participant API as REST API
-    participant DB as PostgreSQL
-    participant Worker as Background Worker
+<p align="center">
+  <img src="docs/assets/dataflow.svg" alt="Data Flow" width="100%">
+</p>
 
-    User->>Claude: "Create a task for John's follow-up"
-    Claude->>MCP: tasks_create(title, contact_id)
-    MCP->>DB: INSERT INTO tasks.tasks
-    DB-->>MCP: task_id
-    MCP-->>Claude: {success: true, id: "..."}
-    Claude-->>User: "Created task for John"
+Ask Claude naturally. Substrate handles the rest.
 
-    Note over Worker,DB: Async workflows
-    Worker->>DB: Poll for due reminders
-    Worker->>API: Send notification email
+```
+You: "Create a task to follow up with John next week"
+
+Claude → MCP Server → PostgreSQL → Done
+
+You: "What invoices are overdue?"
+
+Claude → MCP Server → PostgreSQL → "You have 3 overdue invoices..."
 ```
 
 ---
@@ -120,13 +108,13 @@ cd substrate
 
 # Configure
 cp .env.template .env
-# Add your OPENAI_API_KEY to .env
+# Add your OPENAI_API_KEY
 
 # Launch
 uv sync && make init
 ```
 
-**That's it.** Open http://localhost:8000
+Open http://localhost:8000 — you're running.
 
 | Endpoint | Purpose |
 |----------|---------|
@@ -137,65 +125,29 @@ uv sync && make init
 
 ---
 
-## Domain Model
+## Built-in Modules
 
-```mermaid
-erDiagram
-    CONTACTS ||--o{ INTERACTIONS : has
-    CONTACTS }o--|| COMPANIES : "works at"
-    CONTACTS ||--o{ TASKS : linked
-    CONTACTS ||--o{ EVENTS : attendee
-
-    EVENTS ||--o{ ATTENDEES : has
-    EVENTS ||--o{ CALENDAR : scheduled
-
-    NOTES ||--o{ EMBEDDINGS : indexed
-
-    INBOXES ||--o{ USERS : "belongs to"
-
-    CONTACTS {
-        uuid id
-        string email
-        string name
-        string type
-        jsonb data
-    }
-
-    TASKS {
-        uuid id
-        string title
-        string status
-        timestamp due_at
-        uuid contact_id
-    }
-
-    EVENTS {
-        uuid id
-        string title
-        timestamp starts_at
-        string status
-    }
-
-    NOTES {
-        uuid id
-        string title
-        text content
-        text[] tags
-    }
-```
+| Module | Description | AI Tools |
+|--------|-------------|----------|
+| **crm/** | Contacts, companies, interactions | `crm_contacts_*`, `crm_companies_*` |
+| **tasks/** | Task management with priorities | `tasks_create`, `tasks_complete`, ... |
+| **calendar/** | Events, attendees, reminders | `calendar_today`, `calendar_upcoming`, ... |
+| **notes/** | Knowledge base, embeddings | `notes_query`, `notes_create`, ... |
+| **email/** | Send/receive via Resend | `email_send`, `email_list`, ... |
+| **events/** | Routing rules, webhooks | `events_rules_*`, `events_query` |
+| **auth/** | Users and inboxes | `inboxes_*`, `users_*` |
 
 ---
 
 ## Claude Code Integration
 
-Substrate exposes **70+ MCP tools** to Claude Code:
+Substrate exposes **70+ MCP tools** for Claude Code:
 
 ```bash
-# Add Substrate as MCP server
 claude mcp add substrate -- .venv/bin/python -m substrate.ui.mcp.server
 ```
 
-Then ask Claude:
+Then just ask:
 
 ```
 "Show me contacts I haven't talked to in 30 days"
@@ -204,29 +156,18 @@ Then ask Claude:
 "What tasks are due this week?"
 ```
 
-### Available Tools
-
-| Domain | Tools |
-|--------|-------|
-| **CRM** | `crm_contacts_query`, `crm_contacts_create`, `crm_companies_*`, `crm_interactions_*` |
-| **Tasks** | `tasks_pending`, `tasks_create`, `tasks_complete`, `tasks_query` |
-| **Calendar** | `calendar_today`, `calendar_upcoming`, `calendar_events_create`, `calendar_attendees_*` |
-| **Notes** | `notes_query`, `notes_create`, `notes_update`, `notes_delete` |
-| **Email** | `email_send`, `email_list`, `email_reply`, `email_stats` |
-| **Events** | `events_rules_*`, `events_query`, `events_reprocess` |
-
 ---
 
 ## Tech Stack
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| **Database** | PostgreSQL + pgvector | Data + embeddings |
-| **Workflows** | [Absurd](https://github.com/absurd-industries/absurd) | Durable background tasks |
+| **Database** | PostgreSQL + pgvector | Data + vector embeddings |
+| **Workflows** | Absurd | Durable background tasks |
 | **API** | FastAPI | REST endpoints |
 | **AI** | Pydantic AI + OpenAI | Chat interface |
 | **MCP** | Model Context Protocol | Claude Code integration |
-| **Monitoring** | Habitat (Go + SolidJS) | Task dashboard |
+| **Monitoring** | Habitat | Task dashboard (Go + SolidJS) |
 
 ---
 
@@ -234,81 +175,31 @@ Then ask Claude:
 
 ```
 substrate/
-├── core/                   # Infrastructure
+├── core/                   # Infrastructure (don't modify)
 │   ├── db/                 # Connection pool, migrations
 │   ├── worker/             # Background task runner
 │   └── config.py           # Environment configuration
 │
-├── domains/                # Business Logic
+├── domains/                # ← YOUR MODULES GO HERE
+│   ├── crm/                # Contacts, companies
+│   ├── tasks/              # Task management
+│   ├── calendar/           # Events, scheduling
+│   ├── notes/              # Knowledge base
+│   ├── email/              # Email integration
+│   ├── events/             # Routing rules
 │   ├── auth/               # Users, inboxes
-│   ├── calendar/           # Events, attendees, reminders
-│   ├── crm/                # Contacts, companies, interactions
-│   ├── email/              # Send/receive via Resend
-│   ├── events/             # Routing rules, pattern matching
-│   ├── notes/              # Knowledge base, embeddings
-│   └── tasks/              # Task management
+│   └── your-module/        # ← Add your own!
 │
-├── integrations/           # External Systems
+├── integrations/           # External system connectors
 │   ├── obsidian/           # Vault sync (optional)
 │   └── resend/             # Email API
 │
-├── ui/                     # Interfaces
-│   ├── api/                # FastAPI REST server
-│   ├── chat/               # AI chat agent
-│   ├── mcp/                # Claude Code MCP server
-│   └── web/                # HTML dashboards
-│
-├── habitat/                # Task monitoring (Go)
-└── libs/absurd-sdk/        # Vendored workflow SDK
+└── ui/                     # Interfaces
+    ├── api/                # REST API
+    ├── chat/               # AI chat
+    ├── mcp/                # Claude Code server
+    └── web/                # Dashboards
 ```
-
----
-
-## Adding a Domain
-
-Create your own domain in minutes:
-
-```bash
-mkdir -p substrate/domains/invoicing/sql
-```
-
-**1. Schema** (`sql/001_init.sql`):
-```sql
-CREATE SCHEMA IF NOT EXISTS invoicing;
-
-CREATE TABLE invoicing.invoices (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    contact_id UUID REFERENCES crm.contacts(id),
-    status TEXT DEFAULT 'draft',
-    total_cents INTEGER,
-    due_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-```
-
-**2. Logic** (`logic.py`):
-```python
-from substrate.core.db.connection import get_connection
-
-def create_invoice(contact_id: str, items: list) -> dict:
-    with get_connection() as conn:
-        # Your business logic here
-        pass
-```
-
-**3. AI Tools** (`tools.py`):
-```python
-def create_invoice_tool(contact_id: str, items: list) -> dict:
-    """Create an invoice for a contact."""
-    return create_invoice(contact_id, items)
-```
-
-**4. Run migrations:**
-```bash
-make migrate
-```
-
-Your domain is now queryable via API and available to Claude Code.
 
 ---
 
@@ -347,22 +238,22 @@ make migrate       # Run migrations
 >
 > **Then automate.** Schedule agents when you trust the process.
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full design philosophy.
+Read the full [Architecture Guide](docs/ARCHITECTURE.md).
 
 ---
 
 ## Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License - see [LICENSE](LICENSE).
 
 ---
 
 <p align="center">
-  <sub>Built for solopreneurs who want to own their stack.</sub>
+  <sub>Built for people who want to own their stack.</sub>
 </p>

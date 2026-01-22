@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <defs>
+    <linearGradient id="purple" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="100%" style="stop-color:#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#34d399"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f59e0b"/>
+      <stop offset="100%" style="stop-color:#fbbf24"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <rect width="800" height="500" fill="#0f172a"/>
+
+  <!-- Title -->
+  <text x="400" y="40" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">Substrate Architecture</text>
+
+  <!-- UI Layer -->
+  <g filter="url(#shadow)">
+    <rect x="50" y="70" width="700" height="80" rx="12" fill="#1e293b" stroke="url(#purple)" stroke-width="2"/>
+    <text x="80" y="100" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="url(#purple)">UI LAYER</text>
+    <rect x="80" y="115" width="90" height="28" rx="6" fill="#312e81"/>
+    <text x="125" y="134" text-anchor="middle" font-family="monospace" font-size="11" fill="#c7d2fe">REST API</text>
+    <rect x="185" y="115" width="90" height="28" rx="6" fill="#312e81"/>
+    <text x="230" y="134" text-anchor="middle" font-family="monospace" font-size="11" fill="#c7d2fe">AI Chat</text>
+    <rect x="290" y="115" width="100" height="28" rx="6" fill="#312e81"/>
+    <text x="340" y="134" text-anchor="middle" font-family="monospace" font-size="11" fill="#c7d2fe">MCP Server</text>
+    <rect x="405" y="115" width="110" height="28" rx="6" fill="#312e81"/>
+    <text x="460" y="134" text-anchor="middle" font-family="monospace" font-size="11" fill="#c7d2fe">Dashboards</text>
+    <rect x="530" y="115" width="90" height="28" rx="6" fill="#312e81"/>
+    <text x="575" y="134" text-anchor="middle" font-family="monospace" font-size="11" fill="#c7d2fe">CLI</text>
+    <rect x="635" y="115" width="90" height="28" rx="6" fill="#312e81"/>
+    <text x="680" y="134" text-anchor="middle" font-family="monospace" font-size="11" fill="#c7d2fe">+ Custom</text>
+  </g>
+
+  <!-- Arrow down -->
+  <path d="M400 155 L400 175" stroke="#475569" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Domains Layer -->
+  <g filter="url(#shadow)">
+    <rect x="50" y="180" width="700" height="100" rx="12" fill="#1e293b" stroke="url(#blue)" stroke-width="2"/>
+    <text x="80" y="210" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="url(#blue)">DOMAINS (Pluggable Modules)</text>
+    <rect x="80" y="225" width="70" height="45" rx="6" fill="#1e3a5f"/>
+    <text x="115" y="245" text-anchor="middle" font-family="monospace" font-size="10" fill="#7dd3fc">crm/</text>
+    <text x="115" y="260" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">contacts</text>
+    <rect x="160" y="225" width="70" height="45" rx="6" fill="#1e3a5f"/>
+    <text x="195" y="245" text-anchor="middle" font-family="monospace" font-size="10" fill="#7dd3fc">tasks/</text>
+    <text x="195" y="260" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">todos</text>
+    <rect x="240" y="225" width="80" height="45" rx="6" fill="#1e3a5f"/>
+    <text x="280" y="245" text-anchor="middle" font-family="monospace" font-size="10" fill="#7dd3fc">calendar/</text>
+    <text x="280" y="260" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">events</text>
+    <rect x="330" y="225" width="70" height="45" rx="6" fill="#1e3a5f"/>
+    <text x="365" y="245" text-anchor="middle" font-family="monospace" font-size="10" fill="#7dd3fc">notes/</text>
+    <text x="365" y="260" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">vault</text>
+    <rect x="410" y="225" width="70" height="45" rx="6" fill="#1e3a5f"/>
+    <text x="445" y="245" text-anchor="middle" font-family="monospace" font-size="10" fill="#7dd3fc">email/</text>
+    <text x="445" y="260" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">inbox</text>
+    <rect x="490" y="225" width="70" height="45" rx="6" fill="#1e3a5f"/>
+    <text x="525" y="245" text-anchor="middle" font-family="monospace" font-size="10" fill="#7dd3fc">events/</text>
+    <text x="525" y="260" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">routing</text>
+    <rect x="570" y="225" width="70" height="45" rx="6" fill="#1e3a5f"/>
+    <text x="605" y="245" text-anchor="middle" font-family="monospace" font-size="10" fill="#7dd3fc">auth/</text>
+    <text x="605" y="260" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">users</text>
+    <rect x="650" y="225" width="80" height="45" rx="6" fill="#0f766e" stroke="#14b8a6" stroke-width="2" stroke-dasharray="4"/>
+    <text x="690" y="245" text-anchor="middle" font-family="monospace" font-size="10" fill="#5eead4">yours/</text>
+    <text x="690" y="260" text-anchor="middle" font-family="monospace" font-size="8" fill="#14b8a6">+ new</text>
+  </g>
+
+  <!-- Arrow down -->
+  <path d="M400 285 L400 305" stroke="#475569" stroke-width="2"/>
+
+  <!-- Integrations Layer -->
+  <g filter="url(#shadow)">
+    <rect x="50" y="310" width="340" height="80" rx="12" fill="#1e293b" stroke="url(#green)" stroke-width="2"/>
+    <text x="80" y="340" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="url(#green)">INTEGRATIONS</text>
+    <rect x="80" y="355" width="90" height="28" rx="6" fill="#14532d"/>
+    <text x="125" y="374" text-anchor="middle" font-family="monospace" font-size="11" fill="#86efac">obsidian/</text>
+    <rect x="180" y="355" width="80" height="28" rx="6" fill="#14532d"/>
+    <text x="220" y="374" text-anchor="middle" font-family="monospace" font-size="11" fill="#86efac">resend/</text>
+    <rect x="270" y="355" width="100" height="28" rx="6" fill="#14532d" stroke="#22c55e" stroke-dasharray="4"/>
+    <text x="320" y="374" text-anchor="middle" font-family="monospace" font-size="11" fill="#22c55e">+ custom/</text>
+  </g>
+
+  <!-- Core Layer -->
+  <g filter="url(#shadow)">
+    <rect x="410" y="310" width="340" height="80" rx="12" fill="#1e293b" stroke="url(#orange)" stroke-width="2"/>
+    <text x="440" y="340" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="url(#orange)">CORE</text>
+    <rect x="440" y="355" width="90" height="28" rx="6" fill="#451a03"/>
+    <text x="485" y="374" text-anchor="middle" font-family="monospace" font-size="11" fill="#fcd34d">db/</text>
+    <rect x="540" y="355" width="90" height="28" rx="6" fill="#451a03"/>
+    <text x="585" y="374" text-anchor="middle" font-family="monospace" font-size="11" fill="#fcd34d">worker/</text>
+    <rect x="640" y="355" width="90" height="28" rx="6" fill="#451a03"/>
+    <text x="685" y="374" text-anchor="middle" font-family="monospace" font-size="11" fill="#fcd34d">config/</text>
+  </g>
+
+  <!-- Arrow down -->
+  <path d="M400 395 L400 415" stroke="#475569" stroke-width="2"/>
+
+  <!-- Database -->
+  <g filter="url(#shadow)">
+    <rect x="250" y="420" width="300" height="60" rx="12" fill="#1e293b" stroke="#64748b" stroke-width="2"/>
+    <text x="400" y="455" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="#f8fafc">PostgreSQL</text>
+    <text x="400" y="472" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Your data. Your queries. Your ownership.</text>
+  </g>
+
+  <!-- Claude Code callout -->
+  <g filter="url(#shadow)">
+    <rect x="620" y="70" width="120" height="35" rx="8" fill="#7c3aed"/>
+    <text x="680" y="93" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#fff">Claude Code</text>
+    <path d="M620 88 L530 120" stroke="#7c3aed" stroke-width="2" stroke-dasharray="4"/>
+  </g>
+</svg>
