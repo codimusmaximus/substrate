@@ -12,8 +12,8 @@
   <rect width="800" height="450" fill="#0f172a"/>
 
   <!-- Title -->
-  <text x="400" y="35" text-anchor="middle" font-family="system-ui, sans-serif" font-size="22" font-weight="700" fill="#f8fafc">Build Your Own Modules</text>
-  <text x="400" y="58" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#64748b">Each domain is a self-contained module with schema, logic, and AI tools</text>
+  <text x="400" y="35" text-anchor="middle" font-family="system-ui, sans-serif" font-size="22" font-weight="700" fill="#f8fafc">Replace Any SaaS in Minutes</text>
+  <text x="400" y="58" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#64748b">Each domain is self-contained: schema + logic + AI tools = instant SaaS replacement</text>
 
   <!-- Module Template -->
   <g filter="url(#shadow)">

@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <strong>Your personal business operating system.</strong><br>
-  Build modular business systems with PostgreSQL, Python, and AI-native interfaces.
+  <strong>The SaaS Killer.</strong><br>
+  Replace your 10+ subscriptions with one AI-autonomous system you actually own.
 </p>
 
 <p align="center">
@@ -17,11 +17,11 @@
 
 ## The Problem
 
-You're running a business with 10+ SaaS subscriptions. Your data is scattered across tools that don't integrate. You can't query across systems. You don't own anything.
+You're paying $500+/month for fragmented SaaS tools. Your CRM doesn't talk to your task manager. Your calendar is isolated from your contacts. You can't query across systems. AI assistants can't help because they can't access your data. **You're renting software you'll never own.**
 
 ## The Solution
 
-**Substrate** gives you the primitives to build exactly what you need—then extend it with your own modules.
+**Substrate** is your AI-native business operating system. One PostgreSQL database. One codebase. Complete ownership. AI agents that actually understand your entire business.
 
 <p align="center">
   <img src="docs/assets/architecture.svg" alt="Substrate Architecture" width="100%">
@@ -79,23 +79,43 @@ make migrate
 
 ---
 
-## How It Works
+## Three Ways to Work
 
 <p align="center">
   <img src="docs/assets/dataflow.svg" alt="Data Flow" width="100%">
 </p>
 
-Ask Claude naturally. Substrate handles the rest.
+### 1. Developer Mode (Claude Code)
+Build and extend your system using natural language. Claude reads your codebase, understands your schema, and writes code for you.
 
 ```
-You: "Create a task to follow up with John next week"
-
-Claude → MCP Server → PostgreSQL → Done
-
-You: "What invoices are overdue?"
-
-Claude → MCP Server → PostgreSQL → "You have 3 overdue invoices..."
+"Add a contact_id column to invoices and update the API"
+"Create a new domain for inventory tracking"
+"Write a background task to sync with Stripe"
 ```
+
+### 2. Web CRUD UI
+Every domain automatically gets a web interface. Browse, create, edit, and delete records without writing code.
+
+| Endpoint | What You Get |
+|----------|--------------|
+| `/crud?schema=crm` | Contacts, companies, interactions |
+| `/crud?schema=tasks` | Task management |
+| `/crud?schema=calendar` | Events and attendees |
+| `/crud?schema=notes` | Knowledge base |
+
+### 3. AI Chat Interface
+Natural language queries for your business data. The chat uses the same MCP tools as Claude Code.
+
+```
+You: "What meetings do I have tomorrow?"
+AI: "You have 3 meetings: 9am standup, 2pm sales call with Acme, 4pm product review..."
+
+You: "Send a follow-up email to John about the proposal"
+AI: [Drafts and sends email via Resend integration]
+```
+
+**All three interfaces share the same database.** Edit a contact in the CRUD UI, query it in chat, extend the schema with Claude Code.
 
 ---
 
@@ -125,17 +145,19 @@ Open http://localhost:8000 — you're running.
 
 ---
 
-## Built-in Modules
+## Built-in Modules (SaaS Replacements)
 
-| Module | Description | AI Tools |
-|--------|-------------|----------|
-| **crm/** | Contacts, companies, interactions | `crm_contacts_*`, `crm_companies_*` |
-| **tasks/** | Task management with priorities | `tasks_create`, `tasks_complete`, ... |
-| **calendar/** | Events, attendees, reminders | `calendar_today`, `calendar_upcoming`, ... |
-| **notes/** | Knowledge base, embeddings | `notes_query`, `notes_create`, ... |
-| **email/** | Send/receive via Resend | `email_send`, `email_list`, ... |
-| **events/** | Routing rules, webhooks | `events_rules_*`, `events_query` |
-| **auth/** | Users and inboxes | `inboxes_*`, `users_*` |
+| Module | Replaces | AI Tools |
+|--------|----------|----------|
+| **crm/** | HubSpot, Salesforce, Pipedrive | `crm_contacts_*`, `crm_companies_*` |
+| **tasks/** | Asana, Todoist, Linear | `tasks_create`, `tasks_complete`, ... |
+| **calendar/** | Calendly, Cal.com | `calendar_today`, `calendar_upcoming`, ... |
+| **notes/** | Notion, Obsidian (syncs both ways) | `notes_query`, `notes_create`, ... |
+| **email/** | Customer.io, Mailchimp | `email_send`, `email_list`, ... |
+| **events/** | Zapier, Make (routing rules) | `events_rules_*`, `events_query` |
+| **auth/** | Auth0 (users, inboxes) | `inboxes_*`, `users_*` |
+
+**Cost comparison:** ~$500/month in SaaS → $0/month (self-hosted) or ~$20/month (single VPS)
 
 ---
 
@@ -230,13 +252,15 @@ make migrate       # Run migrations
 
 ## Philosophy
 
-> **Manual first.** Do it by hand until you understand it.
+> **Own your stack.** No vendor lock-in. No monthly fees. Your data in PostgreSQL forever.
 >
-> **Then systematize.** Create tables and workflows when the pattern is clear.
+> **AI-native from day one.** Every table is queryable by AI. Every action is an MCP tool.
 >
-> **Then augment.** Add AI tools when intelligence would help.
->
-> **Then automate.** Schedule agents when you trust the process.
+> **Progressive automation:**
+> 1. Manual first—do it by hand until you understand it
+> 2. Systematize—create tables and workflows when the pattern is clear
+> 3. Augment—add AI tools when intelligence would help
+> 4. Automate—schedule agents when you trust the process
 
 Read the full [Architecture Guide](docs/ARCHITECTURE.md).
 
@@ -255,5 +279,6 @@ MIT License - see [LICENSE](LICENSE).
 ---
 
 <p align="center">
-  <sub>Built for people who want to own their stack.</sub>
+  <strong>Stop renting. Start owning.</strong><br>
+  <sub>Built for people who want AI-native business systems without the SaaS tax.</sub>
 </p>

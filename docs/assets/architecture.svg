@@ -24,7 +24,7 @@
   <rect width="800" height="500" fill="#0f172a"/>
 
   <!-- Title -->
-  <text x="400" y="40" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">Substrate Architecture</text>
+  <text x="400" y="40" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">One System. All Your Business Data.</text>
 
   <!-- UI Layer -->
   <g filter="url(#shadow)">
